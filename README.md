@@ -45,7 +45,7 @@ If you want to run this project locally, follow these steps:
 
 ### 1. Clone the repository
 ```bash
-git clone [https://github.com/YOUR_GITHUB_USERNAME/modern-attendance-tracker.git](https://github.com/YOUR_GITHUB_USERNAME/modern-attendance-tracker.git)
+git clone [https://github.com/manjilagamacharyya-glitch/StudentOS.git](https://github.com/YOUR_GITHUB_USERNAME/modern-attendance-tracker.git)
 cd modern-attendance-tracker
 ```
 
