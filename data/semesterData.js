@@ -34,9 +34,9 @@ export const classRoutine = {
   ],
   Friday: [
     { id: 'fri1', time: "09:00", endTime: "10:00", subject: "Maths", room: "IT 2 Room" },
-    { id: 'fri2', time: "11:00", endTime: "12:00", subject: "DCLD", room: "IT 2 Room" },
+    { id: 'fri2', time: "10:00", endTime: "11:00", subject: "DCLD", room: "IT 2 Room" },
     { id: 'fri3', time: "12:00", endTime: "13:00", subject: "OOPS", room: "IT 2 Room" },
-    { id: 'fri4', time: "14:00", endTime: "15:00", subject: "AEC-3 Lab", room: "Room 1" }
+    { id: 'fri4', time: "14:00", endTime: "15:00", subject: "AEC-3", room: "Room 1" }
   ],
   Saturday: [
     { id: 'sat1', time: "09:00", endTime: "11:00", subject: "SEC-3 Lab", room: "IT Lab" },
