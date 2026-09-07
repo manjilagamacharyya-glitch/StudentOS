@@ -8,7 +8,7 @@ import {
   CheckCircle2, XCircle, Calendar, Clock, AlertTriangle, 
   Settings, Plus, Trash2, Edit2, X, Save, MapPin, BarChart3, GraduationCap
 } from 'lucide-react';
-import { classRoutine, holidayList2026 } from '../data/semesterData';
+import { holidayList2026 } from '../data/semesterData';
 import { format } from 'date-fns';
 import { db, auth } from '../lib/firebase';
 import { 
@@ -64,6 +64,7 @@ export default function Dashboard() {
   const [isHoliday, setIsHoliday] = useState<boolean>(false);
   const [holidayName, setHolidayName] = useState<string>("");
   const [subjectsData, setSubjectsData] = useState<SubjectData[]>([]);
+  const [dynamicRoutine, setDynamicRoutine] = useState<Record<string, ClassRoutineItem[]>>({});
 
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -83,7 +84,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const todayStr = format(currentTime, 'yyyy-MM-dd');
-    const dayOfWeek = format(currentTime, 'EEEE') as keyof typeof classRoutine; 
+    const dayOfWeek = format(currentTime, 'EEEE'); 
     const currentHourMin = format(currentTime, 'HH:mm');
 
     const holidayMatch = holidayList2026.find((h: HolidayItem) => h.date === todayStr);
@@ -95,7 +96,7 @@ export default function Dashboard() {
       setIsHoliday(false);
     }
 
-    const todaysRoutine = classRoutine[dayOfWeek] || [];
+    const todaysRoutine = dynamicRoutine[dayOfWeek] || [];
     const activeClass = todaysRoutine.find((c: ClassRoutineItem) => {
       return currentHourMin >= c.time && currentHourMin < c.endTime;
     });
@@ -107,9 +108,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user?.uid) return;
 
+    // 1. Subjects Listener
     const subjectsRef = collection(db, `users/${user.uid}/semesters/sem_3/subjects`);
-    
-    const unsubscribe = onSnapshot(subjectsRef, (snapshot) => {
+    const unsubscribeSubjects = onSnapshot(subjectsRef, (snapshot) => {
       const data: SubjectData[] = [];
       snapshot.forEach((doc) => {
         data.push({
@@ -121,7 +122,21 @@ export default function Dashboard() {
       setSubjectsData(data);
     });
 
-    return () => unsubscribe();
+    // 2. Routine Listener (New)
+    const routineRef = doc(db, `users/${user.uid}/settings/routine`);
+    const unsubscribeRoutine = onSnapshot(routineRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setDynamicRoutine(docSnap.data().schedule || {});
+      } else {
+        setDynamicRoutine({});
+      }
+    });
+
+    // 3. Cleanup both listeners on unmount
+    return () => {
+      unsubscribeSubjects();
+      unsubscribeRoutine();
+    };
   }, [user?.uid]);
 
   // --- DYNAMIC DATABASE FUNCTIONS ---
@@ -311,12 +326,12 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
         >
-          {(!classRoutine[selectedDay as keyof typeof classRoutine] || classRoutine[selectedDay as keyof typeof classRoutine].length === 0) ? (
+          {(!dynamicRoutine[selectedDay] || dynamicRoutine[selectedDay].length === 0) ? (
             <div className="col-span-full glass-card p-8 text-center text-gray-400 rounded-3xl">
               No classes scheduled for {selectedDay}.
             </div>
           ) : (
-            classRoutine[selectedDay as keyof typeof classRoutine].map((cls: ClassRoutineItem) => {
+            dynamicRoutine[selectedDay].map((cls: ClassRoutineItem) => {
               const isCurrent = currentClass?.id === cls.id;
               return (
                 <motion.div 
@@ -452,6 +467,13 @@ export default function Dashboard() {
           >
             <Settings size={18} /> <span className="hidden md:inline">Subjects</span>
           </motion.button>
+
+          <Link href="/routine">
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-white/10 py-2.5 px-4 md:px-6 rounded-full font-medium transition-colors">
+              <Calendar size={18} /> <span className="hidden md:inline">Routine</span>
+            </motion.button>
+          </Link>
+          
           <Link href="/holidays">
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-white/10 py-2.5 px-4 md:px-6 rounded-full font-medium transition-colors">
               <Calendar size={18} /> <span className="hidden md:inline">Holidays</span>
