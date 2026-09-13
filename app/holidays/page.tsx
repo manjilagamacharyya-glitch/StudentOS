@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { db } from '../../lib/firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 
 interface HolidayItem {
   id: string;
@@ -16,6 +17,7 @@ interface HolidayItem {
 }
 
 export default function Holidays() {
+  const { user } = useAuth(); // Added Auth Context
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [holidays, setHolidays] = useState<HolidayItem[]>([]);
   
@@ -27,8 +29,10 @@ export default function Holidays() {
   useEffect(() => {
     setCurrentTime(new Date());
 
-    // Listen to Firebase for Holidays
-    const holidaysRef = collection(db, `users/manjil_student_os/holidays`);
+    if (!user?.uid) return; // Wait for user to load
+
+    // Listen to Firebase for Holidays dynamically using user.uid
+    const holidaysRef = collection(db, `users/${user.uid}/holidays`);
     const unsubscribe = onSnapshot(holidaysRef, (snapshot) => {
       const data: HolidayItem[] = [];
       snapshot.forEach((doc) => {
@@ -41,10 +45,11 @@ export default function Holidays() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user?.uid]);
 
   // --- BATCH IMPORT ASSAM 2026 HOLIDAYS ---
   const handleSyncOfficialHolidays = async () => {
+    if (!user?.uid) return;
     const isConfirmed = window.confirm("This will import the official Assam 2026 holidays into your database. Proceed?");
     if (!isConfirmed) return;
 
@@ -92,7 +97,8 @@ export default function Holidays() {
     try {
       const batch = writeBatch(db);
       officialHolidays.forEach((holiday) => {
-        const docRef = doc(collection(db, `users/manjil_student_os/holidays`));
+        // Changed to use user.uid
+        const docRef = doc(collection(db, `users/${user.uid}/holidays`));
         batch.set(docRef, holiday);
       });
       
@@ -105,11 +111,12 @@ export default function Holidays() {
 
   const handleAddHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDate || !newName.trim()) return;
+    if (!user?.uid || !newDate || !newName.trim()) return;
 
     const toastId = toast.loading("Adding holiday...");
     try {
-      await addDoc(collection(db, `users/manjil_student_os/holidays`), {
+      // Changed to use user.uid
+      await addDoc(collection(db, `users/${user.uid}/holidays`), {
         date: newDate,
         name: newName.trim()
       });
@@ -123,11 +130,13 @@ export default function Holidays() {
   };
 
   const handleDeleteHoliday = async (id: string, name: string) => {
+    if (!user?.uid) return;
     if (!window.confirm(`Delete ${name}?`)) return;
     
     const toastId = toast.loading(`Deleting ${name}...`);
     try {
-      await deleteDoc(doc(db, `users/manjil_student_os/holidays`, id));
+      // Changed to use user.uid
+      await deleteDoc(doc(db, `users/${user.uid}/holidays`, id));
       toast.success("Holiday deleted", { id: toastId });
     } catch (error) {
       toast.error("Failed to delete", { id: toastId });
